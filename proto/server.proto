@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option go_package ="github.com/bbruun/grpc-test-2";
+
+service SubscriberService {
+    rpc Subscribe (FromClient) returns (stream ToClient) {};
+}
+
+message FromClient {
+    string Name = 1;
+}
+
+message ToClient {
+    string Message = 1;
+}
+
