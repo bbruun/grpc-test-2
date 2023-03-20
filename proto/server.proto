@@ -8,6 +8,8 @@ service SubscriberService {
 
 message FromClient {
     string Name = 1;
+    string MessageFromClient = 2;
+    string MessageToClient = 3;
 }
 
 message ToClient {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bbruun/grpc-test-2/messaging"
 	proto "github.com/bbruun/grpc-test-2/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -33,12 +34,19 @@ func registerSubscriberServics(grpcServer *grpc.Server) {
 // func (m *mySubscriberService) Subscribe(ctx context.Context, input *proto.FromClient) (*proto.ToClient, error) {
 func (m *mySubscriberService) Subscribe(fromClient *proto.FromClient, toClient proto.SubscriberService_SubscribeServer) error {
 
-	a := time.Now().UTC()
-
 	done := make(chan bool)
 	_ = done
+	var mc *messaging.Minions = messaging.MinionStateCollector
 
-	fmt.Printf("On %d Subscribe() received: %+v\n", a.UnixNano(), fromClient)
+	msgch := make(chan any)
+	mi := messaging.MinionInfo{
+		Name:                  fromClient.Name,
+		MessageFromClient:     fromClient.MessageFromClient,
+		MessageToClient:       fromClient.MessageToClient,
+		CommunicationsChannel: msgch,
+		IsConnected:           true,
+	}
+	mc.AddMinion(&mi)
 
 	// return toclient
 	for {
@@ -49,9 +57,10 @@ func (m *mySubscriberService) Subscribe(fromClient *proto.FromClient, toClient p
 			Message: messageToReturn,
 		}
 		if err := toClient.SendMsg(&msg); err != nil {
-			fmt.Printf("failed to send command to minion, closing server port: %s\n", err)
+			mi.IsConnected = false
+			fmt.Printf("minion %s disconected (%s)\n", mi.Name, err)
 			toClient.Context().Done()
-			return fmt.Errorf("client is not connected")
+			return fmt.Errorf("client %s is not connected", mi.Name)
 		}
 		time.Sleep(2 * time.Second)
 
